@@ -1,0 +1,180 @@
+-devtools dependency is used to autorestart the application
+-if their are diff app.props files(prod,dev....) we will specify the file by writing the line spring.profiles.active=dev for dev environment in the main app.props file
+-If we have complex properties what we will do is create one class for handling this in our application, @ConfigurationProperties(prefix="our conf prefix(ex:spring.db.username use spring.db)") then add @component to spring to manage it and then we will create variables username,pss,etc and create getters and setters for those.
+-Spring Boot Actuator-will display the info in localhost:8080/actuator
+monitor and manage your app in prod
+-if we need to expose all the endpoints provioded by actuator we need to include management.endpoints.web.exposure.include=*(you can also include only required as well ie.,=health,metrics)
+-@controller->response web app
+-@RestController->response is a json/xml data
+JSP:
+all the jsp files should be in the location src/main/resources/META-INF/resources/WEB-INF/jsp
+-we need to add the spring.mvc.view.prefix=/src/main/resources/META-INF/resources/WEB-INF/jsp/ and spring.mvc.view.suffix=.jsp in app.prop file
+-spring mvc already knows about /src/main/resources/META-INF/resources this path so we can only mention prefix as /WEB-INF/jsp/
+-if we need to add jsp in our project we will add "tomcat-embed-jasper" dependency.
+-In @Controller, we can return a view in Spring Web MVC.
+-In @RestController, we can not return a view.
+-whenever we need to pass anything from controller to jsp we will do it by putting it to the model
+-@RequestParamater is used to get the value from the http request and ModelMap is used to map that value into our jsp
+	@RequestMapping("/login")
+	public String loginPage(@RequestParam String name,ModelMap model) {
+		model.put("name", name);
+		return "login";
+-http request "http://localhost:8080/login?name=mohan"
+-will get the value of name in jsp by ${name}
+
+Logging:
+-logging.level.org.springframework=debug if we need debug logs
+trace-will pring all types of logs
+debug-will print debug,info,warning,error
+info-will pring info,warning,error
+warning-warning and error will be printed
+error-only error,exceptions will be printed
+off-turn off the logging
+-we can also log seperate logging for seperate packages by giving the package name and set logging level for that package.(logging.level.package-name=error)
+-private Logger logger=LoggerFactory.getLogger(getClass()); create the Logger object and use this for logging eg: logger.info("statements");
+-we can write logs in specific file by providing the file name in app.props file (logging.file.name=logfile.log)
+
+DispatcherServlet:
+It acts as FrontController and controls the flow like which request for which controller/view
+A.receives HTTP request
+B.process HTTP request
+B1.identifies correct controller method(based on request URL)
+B2.Executes controller method(retuens model and view name)
+B3.Identifies correct view(using view resolver)
+B4.executes view
+C.retuens HTTP response
+
+LogIn Form:
+Any information if we need to pass to a website its recommended to use post method(<form method="post">)
+Displaying Login credentials in JSP:
+	@RequestMapping("/login")
+	public String loginPage() {
+		return "login";
+	}
+-instead of simply giving the login url in requestmapping we will pass the paramaters, value as url and method as POST/GET to use same url to navigate to diff JSP and display the entered details.
+
+@RequestMapping(value="login", method=RequestMethod.GET)
+	public String loginPage() {
+		return "login";
+	}
+	
+@RequestMapping(value="login", method=RequestMethod.POST)
+	public String WelcomePage(@RequestParam String name,@RequestParam String password,
+			ModelMap model) {
+		model.put("name", name);
+		model.put("password", password);
+		return "welcome";
+	}
+- Session vs request scope:
+req scope:active for a single request only
+once the response is sent back,the req attributes will be removed from the memory
+these can not be used for future requests
+recommended for most use cases
+session scope:details stored accross multiple requests
+be carefull what you store in session
+takes additional memory as all details are stored on server
+@SessionAttributes("name")
+if we want to make name as session attribute we need to add name in all the controllers which we want to make use of it.
+
+-Adding validations to spring boot
+1.spring boot starter validation in pom.xml
+2.command Bean(2way binding todo.jsp&todoController.java)
+3.add validation to bean(todo.java)
+4.display validation errors in the view(todo.jsp)
+
+JPA and JDBC
+- in order to spring jpa,jdbc,he db in our project we need to add (spring-boot-starter-data-jdbc,spring-boot-starter-data-jpa,spring-boot-starter-web,h2) dependencies to our pom
+
+-add spring.h2.console.enabled=true in app.props file to use h2 db.
+-h2 will generate random url for everytime we refresh our project so in order to provide one single url we need to add spring.datasource.url=jdbc:h2:mem:testdb to our pom.xml
+-we need to autowire JdbcTemplate to use the sql queries in spring jdbc
+-CommandLineRunner will get trigreed immediately whenever we start the application and the oparation in this class will be perfomed first.
+-JPA EntityManager will simplify the queries, we need to autowired EntityManager in our class and to create an JPA entity repository class we need to annotate the class with @Repository,@Transactional, need to annotate the tbale class with @Entity,fields with @Column
+-by using JAP entity we are no need to write SQL queries simplye we just use predefined java methods to insert,delete,find.
+	@Autowired
+	private EntityManager entityManager;
+	public void insert(Course course) {
+		entityManager.merge(course);
+	}
+	public Course findById(long id) {
+		return entityManager.find(Course.class, id);
+	}
+	public void deleteById(long id) {
+		Course course=entityManager.find(Course.class,id);
+		entityManager.remove(course);
+	}
+-if we are executing the jpa and want to see the sql which were generated adding spring.jpa.show-sql=true will appear in console log
+-by using JPA entity it is only performing operations using only primary-key i.e., i'm unable to find or delete using other than primary key attributes
+SpringDataJpa: it is used to reduce the code,it will provide mre predefined methods
+-in order to use it we need to create one interface and extends JpaRepository
+public interface CourseSpringDataJpaRepository extends JpaRepository<Course,Long>{	
+}
+-we can simply autowire this in our commandline runner class and perform operations like save,findById,delete etc.,
+-if need to findByName i.e, other than primary key field we will write a method in repository interface as List<Course> findByName(String name) and call this method in commandLineRunner class.
+
+JDBC to Spring JDBC to JPA to Spring Data JPA
+JDBC
+• Write a lot of SQL queries! (delete from todo where id=?)
+• And write a lot of Java code
+Spring JDBC
+• Write a lot of SQL queries (delete from todo where id=?)
+• BUT lesser Java code
+JDBC example:
+public void deleteTodo (int id) {
+	PreparedStatement st = null;
+	try{
+		st = db. conn. prepareStatement (DELETE_TODO_QUERY) :
+		st. setInt(1, id);
+		st. execute ();
+	}catch (SQLException e) {
+		logger fatal ("Query Failed:" + DELETE_TODO_QUERY, e) ;
+	}
+	finally {
+		if (st != null) {
+			try {st. close();}
+			catch (SQLException e) {}
+		}
+	}
+}
+Spring JDBC example:
+public void deleteTodo(int id){
+	jdbcTemplate.update(DELETE_TODO-QUERY,id);
+}
+JPA
+• Do NOT worry about queries
+• Just Map Entities to Tables!
+Spring Data JPA
+• Let's make JPA even more simple!
+• I will take care of everything!
+JPA example:
+@Repository
+@Transactional
+public class PersonJpaRepository {
+	@PersistenceContext
+	EntityManager entityManager;
+	public Person findById(int id) {
+		return entityManager. find(Person.class, id);
+	}
+	public Person update (Person person) {
+		return entityManager. merge (person) ;
+	}
+	public Person insert (Person person) {
+		return entityManager merge (person);
+	}
+	public void deleteById(int id) {..
+Spring Data JPA Example:
+public interface TodoRepository extends JpaRepository<Todo,Integer>{
+}
+
+Hibernate vs JPA
+• JPA defines the specification. It is an API.
+• How do you define entities?
+• How do you map attributes?
+• Who manages the entities?
+• Hibernate is one of the popular implementations of JPA
+• Using Hibernate directly would result in a lock in to Hibernate
+- There are other JPA implementations (Toplink, for example)
+
+gitHub token:
+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
+ 
